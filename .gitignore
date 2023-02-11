@@ -1,4 +1,5 @@
-data/*.csv
-data/*.dta
+data/big/*.csv
+data/big/*.dta
 *.log
 *.tex
+*.Rhistory

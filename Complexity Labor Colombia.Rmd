@@ -48,17 +48,34 @@ geih_22 <- geih_22 %>%
 ```{r}
 # Quick complexity
 
+# RAMA4D is the 4 digit code for the industry
+
+names(geih_22)
 complexity_colombia <- geih_22 %>%
   filter(!is.na(RAMA4D_R4) & !is.na(wage)) %>%
-  group_by(Dpt_name, RAMA4D_R4) %>%
-  summarize(amount = sum(weights)) %>%
-  mutate(Dpt_name = ifelse(is.na(Dpt_name),"Others",Dpt_name),
-         RAMA4D_R4 = as.factor(RAMA4D_R4)) %>%
-  mutate_at(3, ~replace_na(.,0))
-
-colnames(complexity_colombia) <- c("country","product","value")
+  group_by(Dpt_name, RAMA4D_R4) %>% 
+  mutate(
+         effective_wage = weights * wage,
+         effective_education = weights * education
+  ) %>%
+  summarize(
+            people = sum(weights),
+            wages  = sum(effective_wage),
+            eduction = sum(effective_education)
+  ) %>%
+  mutate(
+         Dpt_name = ifelse(is.na(Dpt_name), "Others", Dpt_name),
+         RAMA4D_R4 = as.factor(RAMA4D_R4)
+  ) %>%
+  mutate_at(3, ~replace_na(., 0))
 
   
+complexity_colombia 
+colnames(complexity_colombia) <- c("state", "industry", "people", "wages", "education")
+write_csv(complexity_colombia, "data/colombia-complexity-codes.csv")
+
+colnames(complexity_colombia) <- c("country","product","value") # get things back to how economiccomplexity package wants
+
 ```
 
 
