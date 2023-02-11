@@ -1,0 +1,167 @@
+---
+title: "Complexity"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r}
+## Setting up
+# Remove everything
+# rm(list = ls())
+
+# Load libraries
+library(haven)
+library(tidyverse)
+library(data.table)
+library(strucchange)
+library(forecast)
+library(tseries)
+library(foreign)
+library(stargazer)
+library(colmaps)
+library(sf)
+library(gt)
+library(oaxaca)
+```
+
+```{r}
+# Data upload
+geih_22 <- fread("geih_22.csv")
+dept_names <- read_csv("dept_names.csv")
+gdp_dept <- fread("gdp_state.csv")
+```
+
+```{r}
+# Merge names of different departmetments
+geih_22 <- geih_22 %>%
+  mutate(DPTO = DPTO.x) %>%
+  left_join(dept_names, by = "DPTO") %>%
+  left_join(gdp_dept, by = "Dpt_name") %>%
+  mutate(formal_number = ifelse(formal == "Informal", 0, 1)) %>%
+  mutate(Dpt_name = ifelse(is.na(Dpt_name), "Others", Dpt_name))
+
+# Remove department names
+#rm(gdp_dept)
+```
+
+```{r}
+# Quick complexity
+
+complexity_colombia <- geih_22 %>%
+  filter(!is.na(RAMA2D_R4) & !is.na(wage)) %>%
+  group_by(Dpt_name, RAMA2D_R4) %>%
+  summarize(amount = sum(weights)) %>%
+  mutate(
+         Dpt_name = ifelse(is.na(Dpt_name), "Others", Dpt_name),
+         RAMA2D_R4 = as.factor(RAMA2D_R4)
+  ) %>%
+  mutate_at(3, ~replace_na(.,0))
+
+colnames(complexity_colombia) <- c("country","product","value")
+  
+```
+
+
+```{r}
+#calculate complexity
+library(economiccomplexity)
+
+  mcp = balassa_index(complexity_colombia)
+  
+  complexity = complexity_measures(mcp, method='reflections')
+  eci = complexity$complexity_index_country
+  pci = complexity$complexity_index_product
+  
+  prox = proximity(mcp)
+  prox_p = prox$proximity_product
+  
+  outlook = complexity_outlook(mcp, prox_p, pci)
+  coi = outlook$complexity_outlook_index
+  cog = outlook$complexity_outlook_gain
+  
+  df_cog <- data.frame(as.matrix(cog))
+  df_cog <- df_cog %>% 
+    mutate(country = row.names(.)) %>% 
+    pivot_longer(!country, names_to = "product", values_to = "cog") %>% 
+    mutate(product = ifelse(str_detect(product, "^X"), 
+                            str_sub(product, start=2),
+                            product))
+  
+  df_rca <- data.frame(as.matrix(mcp))
+  df_rca <- df_rca %>% 
+    mutate(country = row.names(.)) %>% 
+    pivot_longer(!country, names_to = "product", values_to = "rca") %>% 
+    mutate(product = ifelse(str_detect(product, "^X"), 
+                            str_sub(product, start=2),
+                            product))
+  
+  prox_df <- data.frame(as.matrix(prox_p))
+  prox_denom <- prox_df %>% 
+    mutate_if(is.numeric, funs(sum(.)))
+  
+  df_density <- data.frame(as.matrix(mcp %*% as.matrix(prox_df)))
+  df_density <- df_density / head(prox_denom, nrow(df_density))
+  df_density <- df_density %>% 
+    mutate(country = row.names(.)) %>% 
+    pivot_longer(!country, names_to = "product", values_to = "density") %>% 
+    mutate(product = ifelse(str_detect(product, "^X"), 
+                            str_sub(product, start=2),
+                            product))
+  
+  df_merge_y = complexity_colombia %>% left_join(df_rca, by=c("country", "product")) %>% 
+    left_join(data.frame(eci, coi) %>% mutate(country=rownames(.)), by="country") %>% 
+    left_join(data.frame(pci) %>% mutate(product=rownames(.)), by="product") %>% 
+    left_join(df_cog, by=c("country", "product")) %>% 
+    left_join(df_density, by=c("country", "product"))
+  
+  df_merge_y$coi <- scale(df_merge_y$coi)
+  df_merge_y$cog <- scale(df_merge_y$cog)
+  
+  
+  df_merge_y <- df_merge_y %>%
+    mutate(Dpt_name = country)
+  
+  summ_eci <- df_merge_y %>%
+    group_by(Dpt_name) %>%
+    summarize(eci = mean(eci))
+```
+
+```{r}
+characteristics <-geih_22 %>%
+  filter(!is.na(RAMA2D_R4) & !is.na(wage)) %>%
+  group_by(Dpt_name) %>%
+  summarise(
+    age_avg = round(sum(age*weights)/sum(weights),2),
+    edu_avg = round(sum(education*weights)/sum(weights),2),
+    sex = round(sum((sex-1)*weights)/sum(weights),2), #percentage of women
+    read_write = 100- round(sum((P6160-1)*weights)/sum(weights),2), #percentage who can read and write
+    social_security = 100-round(sum((P6090-1)*weights)/sum(weights),2)*100, #percentage with social security
+    formality = sum(formal_number*weights)/sum(weights)
+  ) %>%
+  left_join(summ_eci)
+  
+
+```
+
+```{r}
+summary(lm(formality ~ eci + age_avg + edu_avg + sex + read_write + social_security,
+           data = characteristics))
+
+summary(lm(formality ~ age_avg + edu_avg + sex + read_write + social_security,
+           data = characteristics))
+
+summary(lm(formality ~ eci + age_avg  + sex + read_write + social_security,
+           data = characteristics))
+
+summary(lm(formality ~ eci,
+           data = characteristics))
+
+summary(lm(formality ~ edu_avg,
+           data = characteristics))
+
+summary(lm(eci ~ edu_avg,
+           data = characteristics))
+```
+
