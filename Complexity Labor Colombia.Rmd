@@ -9,7 +9,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 ## Setting up
 # Remove everything
-rm(list = ls())
+# rm(list = ls())
 
 # Load libraries
 library(haven)
@@ -22,15 +22,14 @@ library(foreign)
 library(stargazer)
 library(colmaps)
 library(sf)
-library(gt)
 library(oaxaca)
 ```
 
 ```{r}
 # Data upload
-geih_22 <- fread("~/Desktop/Sypa Data/GEIH/geih_22.csv")
-dept_names <- read_csv("~/Desktop/Sypa Data/GEIH/dept_names.csv")
-gdp_dept <- fread("~/Desktop/Sypa Data/GEIH/gdp_state.csv")
+geih_22 <- fread("data/geih_22.csv")
+dept_names <- read_csv("data/dept_names.csv")
+gdp_dept <- fread("data/gdp_state.csv")
 ```
 
 ```{r}
