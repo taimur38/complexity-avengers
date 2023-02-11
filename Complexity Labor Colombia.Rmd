@@ -9,7 +9,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 ## Setting up
 # Remove everything
-# rm(list = ls())
+rm(list = ls())
 
 # Load libraries
 library(haven)
@@ -28,19 +28,19 @@ library(oaxaca)
 
 ```{r}
 # Data upload
-geih_22 <- fread("geih_22.csv")
-dept_names <- read_csv("dept_names.csv")
-gdp_dept <- fread("gdp_state.csv")
+geih_22 <- fread("~/Desktop/Sypa Data/GEIH/geih_22.csv")
+dept_names <- read_csv("~/Desktop/Sypa Data/GEIH/dept_names.csv")
+gdp_dept <- fread("~/Desktop/Sypa Data/GEIH/gdp_state.csv")
 ```
 
 ```{r}
 # Merge names of different departmetments
 geih_22 <- geih_22 %>%
-  mutate(DPTO = DPTO.x) %>%
+  mutate(DPTO = DPTO.x ) %>%
   left_join(dept_names, by = "DPTO") %>%
   left_join(gdp_dept, by = "Dpt_name") %>%
   mutate(formal_number = ifelse(formal == "Informal", 0, 1)) %>%
-  mutate(Dpt_name = ifelse(is.na(Dpt_name), "Others", Dpt_name))
+  mutate(Dpt_name = ifelse(is.na(Dpt_name),"Others",Dpt_name))
 
 # Remove department names
 #rm(gdp_dept)
@@ -50,16 +50,15 @@ geih_22 <- geih_22 %>%
 # Quick complexity
 
 complexity_colombia <- geih_22 %>%
-  filter(!is.na(RAMA2D_R4) & !is.na(wage)) %>%
-  group_by(Dpt_name, RAMA2D_R4) %>%
+  filter(!is.na(RAMA4D_R4) & !is.na(wage)) %>%
+  group_by(Dpt_name, RAMA4D_R4) %>%
   summarize(amount = sum(weights)) %>%
-  mutate(
-         Dpt_name = ifelse(is.na(Dpt_name), "Others", Dpt_name),
-         RAMA2D_R4 = as.factor(RAMA2D_R4)
-  ) %>%
+  mutate(Dpt_name = ifelse(is.na(Dpt_name),"Others",Dpt_name),
+         RAMA4D_R4 = as.factor(RAMA4D_R4)) %>%
   mutate_at(3, ~replace_na(.,0))
 
 colnames(complexity_colombia) <- c("country","product","value")
+
   
 ```
 
@@ -129,8 +128,8 @@ library(economiccomplexity)
 ```
 
 ```{r}
-characteristics <-geih_22 %>%
-  filter(!is.na(RAMA2D_R4) & !is.na(wage)) %>%
+characteristics <- geih_22 %>%
+  filter(!is.na(RAMA4D_R4) & !is.na(wage)) %>%
   group_by(Dpt_name) %>%
   summarise(
     age_avg = round(sum(age*weights)/sum(weights),2),
@@ -138,27 +137,41 @@ characteristics <-geih_22 %>%
     sex = round(sum((sex-1)*weights)/sum(weights),2), #percentage of women
     read_write = 100- round(sum((P6160-1)*weights)/sum(weights),2), #percentage who can read and write
     social_security = 100-round(sum((P6090-1)*weights)/sum(weights),2)*100, #percentage with social security
-    formality = sum(formal_number*weights)/sum(weights)
+    formality = sum(formal_number*weights)/sum(weights),
+    wage =sum(wage*weights)/sum(weights)
   ) %>%
-  left_join(summ_eci)
+  left_join(summ_eci) %>%
+  mutate(Dpt_name = ifelse(Dpt_name == "Guania","Guainia",Dpt_name)) %>%
+  left_join(gdp_dept)
+  
   
 
 ```
 
 ```{r}
-summary(lm(formality ~ eci + age_avg + edu_avg + sex + read_write + social_security,
+summary(lm(gdp_percentage_state ~ eci + age_avg + edu_avg + sex + read_write + social_security, data = characteristics))
+
+summary(lm(gdp_percentage_state ~  age_avg + edu_avg + sex + read_write + social_security, data = characteristics))
+
+
+summary(lm(edu_avg ~ eci + age_avg  + sex + read_write + social_security, data = characteristics))
+
+```
+
+```{r}
+summary(lm(wage ~ eci + age_avg + edu_avg + sex + read_write + social_security,
            data = characteristics))
 
-summary(lm(formality ~ age_avg + edu_avg + sex + read_write + social_security,
+summary(lm(wage ~ age_avg + edu_avg + sex + read_write + social_security,
            data = characteristics))
 
-summary(lm(formality ~ eci + age_avg  + sex + read_write + social_security,
+summary(lm(wage ~ eci + age_avg  + sex + read_write + social_security,
            data = characteristics))
 
-summary(lm(formality ~ eci,
+summary(lm(wage ~ eci,
            data = characteristics))
 
-summary(lm(formality ~ edu_avg,
+summary(lm(wage ~ edu_avg,
            data = characteristics))
 
 summary(lm(eci ~ edu_avg,
