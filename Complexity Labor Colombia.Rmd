@@ -28,7 +28,7 @@ library(oaxaca)
 ```{r}
 # Data upload
 geih_22 <- fread("data/geih_22.csv")
-dept_names <- read_csv("data/dept_names.csv")
+dept_names <- read_csv("data/big/dept_names.csv")
 gdp_dept <- fread("data/gdp_state.csv")
 ```
 
