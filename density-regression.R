@@ -52,7 +52,7 @@ colomb_df %>%
     theme_few() 
 
 colomb_df %>%
-    filter(year %in% c(2012, 2019, 2022)) %>%
+    filter(year %in% c(2012, 2019)) %>%
     ggplot(aes(x=density, color=factor(year))) +
     geom_density() +
     facet_wrap(~Dpt_name) +
@@ -60,6 +60,8 @@ colomb_df %>%
          title = "Colombia Density histogram"
     ) +
     theme_few() 
+
+ggsave("density-distribution.png")
 
 colomb_df %>%
     filter(year == 2022) %>%

@@ -79,8 +79,8 @@ gdp_dat %>%
               eci = mean(eci)
     ) %>%
     ggplot(aes(x=eci, y=gdp_percent)) +
-    geom_point() +
     geom_smooth(method="lm", se = F, linetype = "dashed") +
+    geom_label(aes(label=Dpt_name)) +
     theme_few() +
     labs(
          title = "State ECI vs GDP Share",
@@ -89,3 +89,15 @@ gdp_dat %>%
 
 ggsave("eci-vs-gdp.png")
 
+
+gdp_eci_df <- gdp_dat %>% 
+    left_join(colomb_df) %>%
+    filter(year == 2022) %>%
+    group_by(Dpt_name) %>%
+    summarise(
+              gdp_percent = mean(gdp_percentage_state),
+              eci = mean(eci)
+    ) 
+
+lm(gdp_percent ~ eci, gdp_eci_df) %>%
+    summary()
