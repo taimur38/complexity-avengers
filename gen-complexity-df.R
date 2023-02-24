@@ -42,6 +42,7 @@ complexity_colombia <- all_years %>%
 
 complexity_colombia
 
+
 # save this for later
 
 write_csv(complexity_colombia, "data/big/complexity-colombia-all.csv")
@@ -57,6 +58,7 @@ complex_df <- tibble(
                          product = "", 
                          value = 0,
                          rca = 0,
+                         rca2 = 0,
                          eci = 0,
                          coi = 0,
                          pci = 0,
@@ -79,8 +81,9 @@ for(y in unique(complexity_colombia$year)) {
         select(country, product, value)
 
     mcp <- balassa_index(subset_df)
+    mcp2 <- balassa_index(subset_df, discrete = F)
     
-    complexity <- complexity_measures(mcp, method='reflections')
+    complexity <- complexity_measures(mcp, method='eigenvalues')
     eci <- complexity$complexity_index_country 
     pci <- complexity$complexity_index_product 
 
@@ -103,9 +106,19 @@ for(y in unique(complexity_colombia$year)) {
 
 
     df_rca <- data.frame(as.matrix(mcp))
+    df_rca2 <- data.frame(as.matrix(mcp2))
     df_rca <- df_rca %>%
         mutate(country = row.names(.)) %>%
         pivot_longer(!country, names_to = "product", values_to = "rca") %>%
+        mutate(
+               product = ifelse(str_detect(product, "^X"),
+                                str_sub(product, start=2),
+                                product)
+        )
+
+    df_rca2 <- df_rca2 %>%
+        mutate(country = row.names(.)) %>%
+        pivot_longer(!country, names_to = "product", values_to = "rca2") %>%
         mutate(
                product = ifelse(str_detect(product, "^X"),
                                 str_sub(product, start=2),
@@ -129,6 +142,7 @@ for(y in unique(complexity_colombia$year)) {
 
     df_merge_y = subset_df %>% 
         left_join(df_rca, by=c("country", "product")) %>%
+        left_join(df_rca2, by=c("country", "product")) %>%
         left_join(
                   data.frame(eci, coi) %>% 
                       mutate(country = rownames(.)), 
@@ -153,8 +167,8 @@ for(y in unique(complexity_colombia$year)) {
 
 }
 
-complex_df %>% 
-    select(year) %>% unique()
+complex_df
+
 # get this from the google drive - andres calculated it
 
 comp_22 <- read_csv("data/big/complexity_wg_22.csv") %>%
@@ -162,9 +176,6 @@ comp_22 <- read_csv("data/big/complexity_wg_22.csv") %>%
            product = formatC(product, digits=4, width=4, flag="0"),
            year = 2022
     )
-
-names(complex_df)
-names(comp_22)
 
 final_df <- bind_rows(complex_df, comp_22)
 # and we save this for a rainy day
