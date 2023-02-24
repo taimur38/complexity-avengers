@@ -16,6 +16,8 @@ all_years %>%
            pct = `TRUE` / (`TRUE` + `FALSE`)
     )
 
+    # get yomna a list of the 
+
 
 # make a dataframe which just has year, state, industry, number of people, and the total wage for it. 
 # the 'fundamental' values from the huge dataset 
@@ -151,9 +153,21 @@ for(y in unique(complexity_colombia$year)) {
 
 }
 
-complex_df
+complex_df %>% 
+    select(year) %>% unique()
+# get this from the google drive - andres calculated it
 
+comp_22 <- read_csv("data/big/complexity_wg_22.csv") %>%
+    mutate(
+           product = formatC(product, digits=4, width=4, flag="0"),
+           year = 2022
+    )
+
+names(complex_df)
+names(comp_22)
+
+final_df <- bind_rows(complex_df, comp_22)
 # and we save this for a rainy day
 
-write_csv(complex_df, "data/big/colombia-complexity-df.csv")
+write_csv(final_df, "data/big/colombia-complexity-df.csv")
 
