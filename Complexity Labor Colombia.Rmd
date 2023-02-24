@@ -92,6 +92,7 @@ colnames(complexity_colombia_wg) <- c("country","product","value")
 library(economiccomplexity)
 
   mcp = balassa_index(complexity_colombia_ppl)
+  mcp2 = balassa_index(complexity_colombia_ppl, discrete = F)
   
   complexity = complexity_measures(mcp, method='reflections')
   eci = complexity$complexity_index_country
@@ -119,6 +120,17 @@ library(economiccomplexity)
     mutate(product = ifelse(str_detect(product, "^X"), 
                             str_sub(product, start=2),
                             product))
+  
+  
+  df_rca2 <- data.frame(as.matrix(mcp2))
+  df_rca2 <- df_rca2 %>% 
+    mutate(country = row.names(.)) %>% 
+    pivot_longer(!country, names_to = "product", values_to = "rca") %>% 
+    mutate(product = ifelse(str_detect(product, "^X"), 
+                            str_sub(product, start=2),
+                            product))
+  
+  colnames(df_rca2) <- c("country","product","rca2")
   
   prox_df <- data.frame(as.matrix(prox_p))
   prox_denom <- prox_df %>% 
@@ -153,6 +165,14 @@ library(economiccomplexity)
 complexity_ppl <- data.frame(lapply(df_merge_y, as.character), stringsAsFactors=FALSE)
 
 write_csv(complexity_ppl, "data/complexity_ppl_22.csv")
+```
+
+
+```{r}
+ggplot(data = df_rca2) +
+  geom_histogram(aes(x = log(rca))) +
+  theme_minimal()
+
 ```
 ```{r}
 #calculate complexity in wages
@@ -217,6 +237,9 @@ write_csv(complexity_ppl, "data/complexity_ppl_22.csv")
     summarize(eci = mean(eci))
   
 complexity_wg <- data.frame(lapply(df_merge_y, as.character), stringsAsFactors=FALSE)
+
+complexity_wg <- complexity_wg %>%
+  left_join(df_rca2)
 
 write_csv(complexity_wg, "data/complexity_wg_22.csv")
 ```
