@@ -73,8 +73,16 @@ complexity_colombia <- geih_22 %>%
 complexity_colombia 
 colnames(complexity_colombia) <- c("state", "industry", "people", "wages", "education")
 write_csv(complexity_colombia, "data/colombia-complexity-codes.csv")
+complexity_colombia_ppl <- complexity_colombia %>%
+  select(state,industry,people)
 
-colnames(complexity_colombia) <- c("country","product","value") # get things back to how economiccomplexity package wants
+
+colnames(complexity_colombia_ppl) <- c("country","product","value") # get things back to how economiccomplexity package wants
+
+complexity_colombia_wg <- complexity_colombia %>%
+  select(state,industry,wages)
+
+colnames(complexity_colombia_wg) <- c("country","product","value") 
 
 ```
 
@@ -83,7 +91,7 @@ colnames(complexity_colombia) <- c("country","product","value") # get things bac
 #calculate complexity
 library(economiccomplexity)
 
-  mcp = balassa_index(complexity_colombia)
+  mcp = balassa_index(complexity_colombia_ppl)
   
   complexity = complexity_measures(mcp, method='reflections')
   eci = complexity$complexity_index_country
@@ -125,7 +133,7 @@ library(economiccomplexity)
                             str_sub(product, start=2),
                             product))
   
-  df_merge_y = complexity_colombia %>% left_join(df_rca, by=c("country", "product")) %>% 
+  df_merge_y = complexity_colombia_ppl %>% left_join(df_rca, by=c("country", "product")) %>% 
     left_join(data.frame(eci, coi) %>% mutate(country=rownames(.)), by="country") %>% 
     left_join(data.frame(pci) %>% mutate(product=rownames(.)), by="product") %>% 
     left_join(df_cog, by=c("country", "product")) %>% 
@@ -141,7 +149,78 @@ library(economiccomplexity)
   summ_eci <- df_merge_y %>%
     group_by(Dpt_name) %>%
     summarize(eci = mean(eci))
+  
+complexity_ppl <- data.frame(lapply(df_merge_y, as.character), stringsAsFactors=FALSE)
+
+write_csv(complexity_ppl, "data/complexity_ppl_22.csv")
 ```
+```{r}
+#calculate complexity in wages
+
+  mcp = balassa_index(complexity_colombia_wg)
+  
+  complexity = complexity_measures(mcp, method='reflections')
+  eci = complexity$complexity_index_country
+  pci = complexity$complexity_index_product
+  
+  prox = proximity(mcp)
+  prox_p = prox$proximity_product
+  
+  outlook = complexity_outlook(mcp, prox_p, pci)
+  coi = outlook$complexity_outlook_index
+  cog = outlook$complexity_outlook_gain
+  
+  df_cog <- data.frame(as.matrix(cog))
+  df_cog <- df_cog %>% 
+    mutate(country = row.names(.)) %>% 
+    pivot_longer(!country, names_to = "product", values_to = "cog") %>% 
+    mutate(product = ifelse(str_detect(product, "^X"), 
+                            str_sub(product, start=2),
+                            product))
+  
+  df_rca <- data.frame(as.matrix(mcp))
+  df_rca <- df_rca %>% 
+    mutate(country = row.names(.)) %>% 
+    pivot_longer(!country, names_to = "product", values_to = "rca") %>% 
+    mutate(product = ifelse(str_detect(product, "^X"), 
+                            str_sub(product, start=2),
+                            product))
+  
+  prox_df <- data.frame(as.matrix(prox_p))
+  prox_denom <- prox_df %>% 
+    mutate_if(is.numeric, funs(sum(.)))
+  
+  df_density <- data.frame(as.matrix(mcp %*% as.matrix(prox_df)))
+  df_density <- df_density / head(prox_denom, nrow(df_density))
+  df_density <- df_density %>% 
+    mutate(country = row.names(.)) %>% 
+    pivot_longer(!country, names_to = "product", values_to = "density") %>% 
+    mutate(product = ifelse(str_detect(product, "^X"), 
+                            str_sub(product, start=2),
+                            product))
+  
+  df_merge_y = complexity_colombia_ppl %>% left_join(df_rca, by=c("country", "product")) %>% 
+    left_join(data.frame(eci, coi) %>% mutate(country=rownames(.)), by="country") %>% 
+    left_join(data.frame(pci) %>% mutate(product=rownames(.)), by="product") %>% 
+    left_join(df_cog, by=c("country", "product")) %>% 
+    left_join(df_density, by=c("country", "product"))
+  
+  df_merge_y$coi <- scale(df_merge_y$coi)
+  df_merge_y$cog <- scale(df_merge_y$cog)
+  
+  
+  df_merge_y <- df_merge_y %>%
+    mutate(Dpt_name = country)
+  
+  summ_eci <- df_merge_y %>%
+    group_by(Dpt_name) %>%
+    summarize(eci = mean(eci))
+  
+complexity_wg <- data.frame(lapply(df_merge_y, as.character), stringsAsFactors=FALSE)
+
+write_csv(complexity_wg, "data/complexity_wg_22.csv")
+```
+
 
 ```{r}
 characteristics <- geih_22 %>%

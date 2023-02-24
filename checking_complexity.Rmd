@@ -1,0 +1,26 @@
+---
+title: "checking_complexity"
+output: pdf_document
+---
+```{r}
+# Load libraries
+library(haven)
+library(tidyverse)
+library(data.table)
+
+```
+
+```{r}
+col_complex_all <- fread("data/colombia-complexity-df.csv") 
+```
+
+```{r}
+complex_summary <-col_complex_all %>%
+  group_by(year, Dpt_name) %>%
+  summarise(eci = mean(eci),
+            coi= mean(coi)) 
+
+ggplot(data = complex_summary) +
+  geom_line(aes(x = year, y = eci, color = Dpt_name)) +
+  theme_minimal()
+```

@@ -1,0 +1,54 @@
+---
+title: "Colombian Map Complexiity"
+output: pdf_document
+---
+```{r}
+# Load libraries
+library(haven)
+library(tidyverse)
+library(data.table)
+library(strucchange)
+library(forecast)
+library(tseries)
+library(foreign)
+library(stargazer)
+library(colmaps)
+library(sf)
+library(oaxaca)
+
+```
+
+```{r}
+# Data upload
+#geih_22 <- fread("data/geih_22.csv")
+#dept_names <- read_csv("data/big/dept_names.csv")
+gdp_dept <- fread("data/gdp_state.csv")
+
+wage_complex <- read_csv("data/complexity_wg_22.csv")
+
+eci_dep <- wage_complex %>%
+  group_by(Dpt_name) %>%
+  summarize(eci = mean(eci)) %>%
+  mutate(Dpt_name = ifelse(Dpt_name == "Guania","Guainia",Dpt_name)) %>%
+  left_join(gdp_dept) %>%
+  mutate(id = str_pad(id, 2, pad = "0"))
+```
+
+```{r}
+
+products <- wage_complex %>%
+  group_by(product) %>%
+  summarize(pci = mean(pci))
+
+```
+
+
+```{r}
+eci_dep %>%
+  colmap(departamentos, data = ., var = "eci")+
+  scale_fill_continuous(low = "#28ae80", high = "#440154", na.value = "wheat")
+
+
+ggsave("map_dgp_state.png",
+       width = 6, height = 5)
+```
