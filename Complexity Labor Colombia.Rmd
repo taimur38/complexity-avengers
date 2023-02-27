@@ -23,6 +23,8 @@ library(stargazer)
 library(colmaps)
 library(sf)
 library(oaxaca)
+library(economiccomplexity)
+
 ```
 
 ```{r}
@@ -89,7 +91,6 @@ colnames(complexity_colombia_wg) <- c("country","product","value")
 
 ```{r}
 #calculate complexity
-library(economiccomplexity)
 
   mcp = balassa_index(complexity_colombia_ppl)
   mcp2 = balassa_index(complexity_colombia_ppl, discrete = F)
@@ -267,13 +268,16 @@ characteristics <- geih_22 %>%
 ```
 
 ```{r}
-summary(lm(gdp_percentage_state ~ eci + age_avg + edu_avg + sex + read_write + social_security, data = characteristics))
+library(stargazer)
+model1<-lm(gdp_percentage_state ~ eci + age_avg + edu_avg + sex + read_write + social_security, data = characteristics)
 
 summary(lm(gdp_percentage_state ~  age_avg + edu_avg + sex + read_write + social_security, data = characteristics))
 
 
 summary(lm(edu_avg ~ eci + age_avg  + sex + read_write + social_security, data = characteristics))
 
+
+stargazer(model1, type = "text")
 ```
 
 ```{r}
