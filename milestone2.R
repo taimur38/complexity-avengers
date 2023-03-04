@@ -9,6 +9,7 @@ colomb_df <- read_csv("data/big/colombia-complexity-df.csv") %>%
 c_df <- read_csv("data/big/complexity-colombia-all.csv")
 gdp_dat <- read_csv("data/gdp_state.csv")
 
+
 # distribution of RCAs 
 
 colomb_df %>%
@@ -101,3 +102,58 @@ gdp_eci_df <- gdp_dat %>%
 
 lm(gdp_percent ~ eci, gdp_eci_df) %>%
     summary()
+
+colomb_df
+
+colomb_df %>%
+    group_by(year, product) %>%
+    summarise(
+              ubiquity = sum(rca)
+    ) %>%
+    left_join(colomb_df) %>%
+    group_by(year, Dpt_name) %>%
+    summarise(
+              diversity = sum(rca, na.rm = T),
+              avg_ubiquity = mean(ubiquity, na.rm = T)
+    ) %>%
+    ungroup() %>%
+    group_by(year) %>%
+    mutate(
+           mean_diversity = mean(diversity, na.rm = T),
+           mean_ubiquities = mean(avg_ubiquity, na.rm = T)
+    ) %>%
+    ungroup() %>%
+    ggplot(aes(x=diversity, avg_ubiquity)) +
+    geom_point() +
+    geom_vline(aes(xintercept = mean_diversity)) +
+    geom_hline(aes(yintercept = mean_ubiquities)) +
+    facet_wrap(~year) +
+    theme_few() +
+    labs(
+         title = "Ubiquity vs Diversity for Colombian States"
+    )
+ggsave("ubiquity-vs-diversity.png")
+
+prod_order <- (colomb_df %>%
+    group_by(year, product) %>%
+    summarise(
+              ubiquity = sum(rca)
+    ) %>% 
+    filter(year == 2012) %>%
+    arrange(-ubiquity))$product
+
+state_order <- colomb_df %>%
+    group_by(year, Dpt_name) %>%
+    summarise(
+              diversity = sum(rca)
+    ) %>% 
+    filter(year == 2012) %>%
+    arrange(-diversity) %>%
+    select(Dpt_name)
+
+ordered_df <- (colomb_df %>%
+    filter(year == 2012) %>%
+    select(year, Dpt_name, product, rca) %>% 
+    pivot_wider(names_from=product, values_from=rca) %>%
+    select(-year))[, c("Dpt_name", prod_order)]
+

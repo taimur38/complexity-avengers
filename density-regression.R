@@ -1,6 +1,7 @@
 library(tidyverse)
 library(lfe)
 library(ggthemes)
+library(stargazer)
 
 colomb_df <- read_csv("data/big/colombia-complexity-df.csv") 
 
@@ -20,10 +21,15 @@ comparison_years1 <- colomb_df %>%
     pivot_wider(names_from = year, values_from=c("density", "rca")) %>%
     mutate(
            rca_diff = rca_2019 - rca_2012
-    ) 
+    ) %>%
+    mutate(
+           rca_factor_2012 = as.factor(rca_2012)
+    )
 
-felm(rca_2019 ~ log(density_2012), comparison_years1) %>%
-    summary()
+felm(rca_2019 ~ log(density_2012) + rca_2012, comparison_years1) %>%
+    stargazer(
+              type = "text"
+    )
 
 # we can also try for 2022
 comparison_years2 <- colomb_df %>%
@@ -35,7 +41,7 @@ comparison_years2 <- colomb_df %>%
     ) 
 
 felm(rca_2022 ~ log(density_2012), comparison_years2) %>%
-    summary()
+    stargazer()
 
 
 ## Some Visualizations ----
