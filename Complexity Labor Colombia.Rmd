@@ -176,9 +176,28 @@ ggplot(data = df_rca2) +
 
 ```
 ```{r}
+#calculate complexity in wages by population
+
+mcp_wages_pop <- complexity_colombia %>%
+  group_by(state) %>%
+  mutate(pop = sum(people)) %>%
+  ungroup() %>%
+  group_by(industry) %>%
+  mutate(prod_total = sum(wages)) %>%
+  ungroup() %>%
+  mutate(pop_total = sum(people)) %>%
+  mutate(rpca = (wages /pop) / (prod_total / pop_total)) %>%
+  mutate(country = state,
+         product = industry) %>%
+   select(country, product, -state, rpca)
+```
+
+
+```{r}
 #calculate complexity in wages
 
   mcp = balassa_index(complexity_colombia_wg)
+  mcp2 = balassa_index(complexity_colombia_wg, discrete = F)
   
   complexity = complexity_measures(mcp, method='reflections')
   eci = complexity$complexity_index_country
@@ -206,6 +225,16 @@ ggplot(data = df_rca2) +
     mutate(product = ifelse(str_detect(product, "^X"), 
                             str_sub(product, start=2),
                             product))
+  
+  df_rca2 <- data.frame(as.matrix(mcp2))
+  df_rca2 <- df_rca2 %>% 
+    mutate(country = row.names(.)) %>% 
+    pivot_longer(!country, names_to = "product", values_to = "rca") %>% 
+    mutate(product = ifelse(str_detect(product, "^X"), 
+                            str_sub(product, start=2),
+                            product))
+  
+  colnames(df_rca2) <- c("country","product","rca2")
   
   prox_df <- data.frame(as.matrix(prox_p))
   prox_denom <- prox_df %>% 
@@ -240,9 +269,18 @@ ggplot(data = df_rca2) +
 complexity_wg <- data.frame(lapply(df_merge_y, as.character), stringsAsFactors=FALSE)
 
 complexity_wg <- complexity_wg %>%
-  left_join(df_rca2)
+  left_join(df_rca2) %>%
+  left_join(mcp_wages_pop)
 
 write_csv(complexity_wg, "data/complexity_wg_22.csv")
+```
+
+```{r}
+ggplot(data = complexity_wg,
+       aes(x = log(rca2), y = log(rpca))) +
+  geom_point() +
+  theme_minimal() +
+  geom_smooth()
 ```
 
 
