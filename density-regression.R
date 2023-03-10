@@ -4,6 +4,7 @@ library(ggthemes)
 library(stargazer)
 
 colomb_df <- read_csv("data/big/colombia-complexity-df.csv") 
+colomb_ppl_df <- read_csv("data/big/colombia-complexity-df-people.csv")
 
 colomb_df <- colomb_df %>%
     select(-country)
@@ -25,8 +26,24 @@ comparison_years1 <- colomb_df %>%
     mutate(
            rca_factor_2012 = as.factor(rca_2012)
     )
+ 
+comparison_years1_ppl <- colomb_ppl_df %>%
+    filter(year %in% c(2012, 2019)) %>%
+    select(year, Dpt_name, product, rca, density) %>%
+    pivot_wider(names_from = year, values_from=c("density", "rca")) %>%
+    mutate(
+           rca_diff = rca_2019 - rca_2012
+    ) %>%
+    mutate(
+           rca_factor_2012 = as.factor(rca_2012)
+    )
 
 felm(rca_2019 ~ log(density_2012) + rca_2012, comparison_years1) %>%
+    stargazer(
+              type = "text"
+    )
+
+felm(rca_2019 ~ log(density_2012) + rca_2012, comparison_years1_ppl) %>%
     stargazer(
               type = "text"
     )
@@ -57,7 +74,28 @@ colomb_df %>%
     ) +
     theme_few() 
 
+colomb_ppl_df %>%
+    ggplot(aes(x=density)) +
+    geom_histogram(data = . %>% filter(year == 2019), fill="red", alpha = 0.4) +
+    geom_histogram(data = . %>% filter(year == 2012), fill="blue", alpha = 0.4) +
+    facet_wrap(~Dpt_name) +
+    labs(
+         title = "Colombia Density histogram",
+         subtitle = "blue = 2012, red = 2019"
+    ) +
+    theme_few() 
+
 colomb_df %>%
+    filter(year %in% c(2012, 2019)) %>%
+    ggplot(aes(x=density, color=factor(year))) +
+    geom_density() +
+    facet_wrap(~Dpt_name) +
+    labs(
+         title = "Colombia Density histogram"
+    ) +
+    theme_few() 
+
+colomb_ppl_df %>%
     filter(year %in% c(2012, 2019)) %>%
     ggplot(aes(x=density, color=factor(year))) +
     geom_density() +
@@ -69,7 +107,7 @@ colomb_df %>%
 
 ggsave("density-distribution.png")
 
-colomb_df %>%
+colomb_ppl_df %>%
     filter(year == 2022) %>%
     ggplot(aes(x=density)) +
     geom_histogram() +

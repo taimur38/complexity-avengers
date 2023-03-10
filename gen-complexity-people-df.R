@@ -41,16 +41,6 @@ complexity_colombia <- all_years %>%
 
 complexity_colombia
 
-
-# save this for later
-
-write_csv(complexity_colombia, "data/big/complexity-colombia-all.csv")
-
-
-# now generate the eci pci cog coi etc stats 
-
-# important: this is using Wages, not people for RCA
-
 complex_df <- tibble( 
                          year = as.integer(),
                          Dpt_name = "",
@@ -58,7 +48,7 @@ complex_df <- tibble(
                          value = 0,
                          rca = 0,
                          rca2 = 0,
-                         rpca_wage = 0,
+                         rpca = 0,
                          eci = 0,
                          coi = 0,
                          pci = 0,
@@ -74,6 +64,7 @@ complex_df <- tibble(
 #            product = industry,
 #            value = wage 
 #     )
+
 for(y in unique(complexity_colombia$year)) {
 
     # first get things into the way the complexity package likes.
@@ -82,8 +73,10 @@ for(y in unique(complexity_colombia$year)) {
         rename(
                country = state,
                product = industry, 
-               value = wage 
+               value = people 
         )
+
+    big_subset_df
 
     subset_df <- big_subset_df %>%
         select(country, product, value)
@@ -91,6 +84,9 @@ for(y in unique(complexity_colombia$year)) {
     mcp <- balassa_index(subset_df)
     mcp2 <- balassa_index(subset_df, discrete = F)
 
+    mcp_p <- balassa_index(subset_df_people)
+    mcp_p2 <- balassa_index(subset_df_people, discrete = F)
+    
     complexity <- complexity_measures(mcp, method='eigenvalues')
     eci <- complexity$complexity_index_country 
     pci <- complexity$complexity_index_product 
@@ -121,20 +117,19 @@ for(y in unique(complexity_colombia$year)) {
     df_rpca <- big_subset_df %>% 
         group_by(product) %>% 
         mutate(
-               wage_total = sum(value, na.rm = T),
+               worker_total = sum(value, na.rm = T),
         ) %>%
         ungroup() %>%
         group_by(country) %>%
         mutate(
-               pop_state = sum(people, na.rm = T)
+               pop_state = sum(value, na.rm = T)
         ) %>%
         ungroup() %>%
-        mutate(pop_total = sum(people, na.rm = T)) %>%
+        mutate(pop_total = sum(value, na.rm = T)) %>%
         mutate(
-               rpca = (value / pop_state) / (wage_total / pop_total),   
+               rpca = (value / pop_state) / (worker_total / pop_total),   
         ) %>%
-        select(country, product, rpca) %>%
-        rename(rpca_wage = rpca)
+        select(country, product, rpca) 
 
     df_rca <- df_rca %>%
         mutate(country = row.names(.)) %>%
@@ -206,15 +201,4 @@ for(y in unique(complexity_colombia$year)) {
 
 complex_df
 
-write_csv(complex_df, "data/big/colombia-complexity-df.csv")
-# get this from the google drive - andres calculated it
-
-# comp_22 <- read_csv("data/big/complexity_wg_22.csv") %>%
-#     mutate(
-#            product = formatC(product, digits=4, width=4, flag="0"),
-#            year = 2022
-#     )
-# 
-# final_df <- bind_rows(complex_df, comp_22)
-# # and we save this for a rainy day
-# 
+write_csv(complex_df, "data/big/colombia-complexity-df-people.csv")

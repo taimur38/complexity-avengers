@@ -186,11 +186,11 @@ mcp_wages_pop <- complexity_colombia %>%
   mutate(prod_total = sum(wages)) %>%
   ungroup() %>%
   mutate(pop_total = sum(people)) %>%
-  mutate(rpca = (wages /pop) / (prod_total / pop_total)) %>%
+  mutate(rpca = (wages / pop) / (prod_total / pop_total)) %>%
   mutate(country = state,
          product = industry) %>%
    select(country, product, -state, rpca)
-```
+``ea
 
 
 ```{r}
