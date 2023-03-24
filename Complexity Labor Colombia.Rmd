@@ -159,7 +159,7 @@ colnames(complexity_colombia_wg) <- c("country","product","value")
   df_merge_y <- df_merge_y %>%
     mutate(Dpt_name = country)
   
-  summ_eci <- df_merge_y %>%
+  summ_eci_ppl <- df_merge_y %>%
     group_by(Dpt_name) %>%
     summarize(eci = mean(eci))
   
@@ -190,7 +190,7 @@ mcp_wages_pop <- complexity_colombia %>%
   mutate(country = state,
          product = industry) %>%
    select(country, product, -state, rpca)
-``ea
+```
 
 
 ```{r}
@@ -301,21 +301,93 @@ characteristics <- geih_22 %>%
   mutate(Dpt_name = ifelse(Dpt_name == "Guania","Guainia",Dpt_name)) %>%
   left_join(gdp_dept)
   
+
+employment <- geih_22 %>%
+  filter(!is.na(RAMA4D_R4) & !is.na(wage)) %>%
+  group_by(Dpt_name) %>%
+  summarise(
+    age_avg = round(sum(age*weights)/sum(weights),2),
+    edu_avg = round(sum(education*weights)/sum(weights),2),
+    sex = round(sum((sex-1)*weights)/sum(weights),2), #percentage of women
+    read_write = 100- round(sum((P6160-1)*weights)/sum(weights),2), #percentage who can read and write
+    social_security = 100-round(sum((P6090-1)*weights)/sum(weights),2)*100, #percentage with social security
+    formality = sum(formal_number*weights)/sum(weights),
+    employment =sum(weights)
+  ) %>%
+  left_join(summ_eci_ppl) %>%
+  mutate(Dpt_name = ifelse(Dpt_name == "Guania","Guainia",Dpt_name)) %>%
+  left_join(gdp_dept)
+  
   
 
 ```
 
 ```{r}
+# Regression with employment
 library(stargazer)
-model1<-lm(gdp_percentage_state ~ eci + age_avg + edu_avg + sex + read_write + social_security, data = characteristics)
 
-summary(lm(gdp_percentage_state ~  age_avg + edu_avg + sex + read_write + social_security, data = characteristics))
+odel1<-lm(gdp_percentage_state ~ eci , data = employment)
+odel2<-lm(gdp_percentage_state ~ eci  + read_write , data = employment)
+odel3<-lm(gdp_percentage_state ~ eci + age_avg + edu_avg + sex + read_write + social_security, data = employment)
+odel4<-lm(gdp_percentage_state ~ age_avg + edu_avg + sex + read_write + social_security, data = employment)
 
 
-summary(lm(edu_avg ~ eci + age_avg  + sex + read_write + social_security, data = characteristics))
+summary(odel3)
 
 
-stargazer(model1, type = "text")
+summary(lm(edu_avg ~ eci + age_avg  + sex + read_write + social_security, 
+           data = employment ))
+
+
+
+stargazer(odel1,
+          odel2,
+          odel3,
+          odel4,
+          type = "latex",
+          font.size = "small",
+          align = TRUE,
+          omit.stat=c("f", "ser"),
+          covariate.labels = c("ECI",
+                               "Age",
+                               "Education",
+                               "Sex",
+                               "Literacy",
+                               "Social security"),
+          dep.var.labels = c("GPD Percentage"))
+```
+
+
+```{r}
+
+
+model1<-lm(gdp_percentage_state ~ eci , data = characteristics)
+model2<-lm(gdp_percentage_state ~ eci  + read_write , data = characteristics)
+model3<-lm(gdp_percentage_state ~ eci + age_avg + edu_avg + sex + read_write + social_security, data = characteristics)
+model4<-lm(gdp_percentage_state ~ age_avg + edu_avg + sex + read_write + social_security, data = characteristics)
+
+
+
+summary(lm(edu_avg ~ eci + age_avg  + sex + read_write + social_security, 
+           data = characteristics %>%
+             filter(Dpt_name != "Bogota")))
+
+
+stargazer(model1,
+          model2,
+          model3,
+          model4,
+          type = "latex",
+          font.size = "small",
+          align = TRUE,
+          omit.stat=c("f", "ser"),
+          covariate.labels = c("ECI",
+                               "Age",
+                               "Education",
+                               "Sex",
+                               "Literacy",
+                               "Social security"),
+          dep.var.labels = c("GPD Percentage"))
 ```
 
 ```{r}
